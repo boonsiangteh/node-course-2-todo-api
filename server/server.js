@@ -1,5 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const {ObjectID} = require('mongodb');
 
 const {mongoose} = require('./db/mongoose');
 const {Todo} = require('./models/todo');
@@ -7,6 +8,7 @@ const {User} = require('./models/user');
 
 var app = express();
 
+const port = process.env.PORT || 3005;
 // use bodyParser middleware to
 app.use(bodyParser.json());
 
@@ -33,8 +35,22 @@ app.get('/todos', (req, res) => {
   })
 })
 
-app.listen(3005, () => {
-  console.log("Started on port 3005");
+// get request to get specific todo
+app.get('/todos/:id', (req, res) => {
+  if (!ObjectID.isValid(req.params.id)) {
+    return res.status(400).send();
+  }
+  // res.send(`id Valid: ${req.params.id}`);
+  Todo.findById(req.params.id).then((todo) => {
+    if (!todo) {
+      return res.status(404).send();
+    }
+    res.send({todo});
+  }).catch((e) => res.status(400).send());
+});
+
+app.listen(port, () => {
+  console.log(`Started on port ${port}`);
 })
 
 module.exports = {app};
