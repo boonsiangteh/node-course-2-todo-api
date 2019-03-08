@@ -1,13 +1,20 @@
 const expect = require('expect');
 const request = require('supertest');
+const {ObjectID} = require('mongodb');
 
 const {app} = require('./../server');
 const {Todo} = require('./../models/todo');
 
 // create a few example todos for testing GET requests
 const todoArr = [
-  {text: "First todo"},
-  {text: "Second todo"}
+  {
+    _id: new ObjectID(),
+    text: "First todo"
+  },
+  {
+    _id: new ObjectID(),
+    text: "Second todo"
+  }
 ];
 
 // in order to pass document length test in our test on Todo collection below,
@@ -67,25 +74,10 @@ describe('POST /todos', () => {
         }).catch((err) => done(err));
       });
   });
-
 });
 
 describe('GET /todos', () => {
   it("should get all todo", (done) => {
-
-    // request(app)
-    //   .get('/todos')
-    //   .expect(200)
-    //   .end((err, res) => {
-    //     if (err) {
-    //       return done(err);
-    //     }
-    //
-    //     Todo.find().then((todos) => {
-    //       expect(todos.length).toBe(2);
-    //       done();
-    //     }).catch((err) => done(err));
-    //   });
 
     // 2nd way to do the same thing
     request(app)
@@ -97,4 +89,35 @@ describe('GET /todos', () => {
       .end(done);
       // no need to pass in fn to end cause we're not doing something async like post method above
   });
-})
+});
+
+describe("GET /todos/:id", () => {
+
+  // test to make sure correct todo is sent back when we make get request
+  it("should get the todo with ID", (done) => {
+    request(app)
+    .get(`/todos/${todoArr[0]._id.toHexString()}`)
+    .expect(200) //expect status code 200 if everything goes well
+    .expect((res) => {
+      expect(res.body.todo.text).toBe(todoArr[0].text); //expect to get the correct todo back
+    })
+    .end(done);
+  });
+
+  // test to make sure 404 returned when no todo with ID is found
+  it("should return 404 with no todo", (done) => {
+    var someId = new ObjectID();
+    request(app)
+    .get(`/todos/${someId.toHexString()}`)
+    .expect(404)
+    .end(done);
+  });
+
+  // test to make sure 400 is returned when ID is invalid
+  it("should return 400 bad request", (done) => {
+    request(app)
+    .get("/todos/123")
+    .expect(400)
+    .end(done);
+  });
+});
