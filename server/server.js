@@ -1,3 +1,4 @@
+const _ = require('lodash');
 const express = require('express');
 const bodyParser = require('body-parser');
 const {ObjectID} = require('mongodb');
@@ -65,6 +66,38 @@ app.delete('/todos/:id', (req, res) => {
     res.send({todo})
   }).catch((e) => res.status(400).send());
 });
+
+// route to update todos based on ID
+app.patch('/todos/:id', (req, res) => {
+  var hexId = req.params.id;
+
+  // invalid object ID passed
+  if (!ObjectID.isValid(hexId)) {
+    return res.status(400).send();
+  }
+
+  // create object where we pick only the properties which we allow users to update
+  var body = _.pick(req.body, ['text', 'completed']);
+  // do some checking to see if todo.completed field is set to true
+  if (_.isBoolean(body.completed) && body.completed) {
+    body.completedAt = new Date().getTime();
+  } else {
+    body.completed = false;
+    body.completedAt = null;
+  }
+
+  Todo.findByIdAndUpdate(hexId, {$set: body}, {new: true})
+    .then((todo) => {
+      if (!todo) {
+        return res.status(404).send();
+      }
+      res.send({todo});
+    })
+    .catch((e) => res.status(400).send());
+
+
+});
+
 
 app.listen(port, () => {
   console.log(`Started on port ${port}`);
