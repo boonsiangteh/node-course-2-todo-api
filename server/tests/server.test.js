@@ -1,5 +1,6 @@
 const expect = require('expect');
 const request = require('supertest');
+const _ = require('lodash');
 const {ObjectID} = require('mongodb');
 
 const {app} = require('./../server');
@@ -13,7 +14,9 @@ const todoArr = [
   },
   {
     _id: new ObjectID(),
-    text: "Second todo"
+    text: "Second todo",
+    completed: true,
+    completedAt: 123
   }
 ];
 
@@ -157,3 +160,88 @@ describe("DELETE /todo/:id", () => {
       .end(done);
   });
 });
+
+describe('PATCH /todos/:id', () => {
+
+  // test to see if todo got updated if everything goes well
+  it('should return todo with new text', (done) => {
+    var hexId = todoArr[0]._id.toHexString();
+    var text = "some bloody text";
+    var completed = true;
+
+    request(app)
+      .patch(`/todos/${hexId}`)
+      .send({text, completed})
+      .expect(200)
+      .expect((res) => {
+        // assert that returned todo object contains new text
+        expect(res.body.todo._id).toBe(hexId);
+        expect(res.body.todo.text).toBe(text);
+        expect(res.body.todo.completed).toBeTruthy();
+        expect(typeof _.toNumber(res.body.todo.completedAt)).toBe('number');
+
+      })
+      .end(done);
+
+      /*
+      this part below was originally written but turns out not needed as we do not actually need to go into db and check our document
+      however, we can enhance checking by adding this code to go into collection and check if our document was really updated
+      */
+      // .end((err, res) => { //quey the db to make sure todo item is really updated
+      //   if (err) {
+      //     return done(err);
+      //   }
+      //
+      //   Todo.findById(hexId).then((todo) => {
+      //     expect(todo.text).toBe(text);
+      //     expect(todo.completed).toBeTruthy();
+      //
+      //     done();
+      //   }).catch((e) => done(e));
+      // });
+  });
+
+  it('should return 404 if todo._id not found', (done) => {
+    var id = new ObjectID().toHexString();
+    request(app)
+      .patch(`/todos/${id}`)
+      .expect(404)
+      .end(done);
+  });
+
+  it('should return 400 if invalid id is given', (done) => {
+    request(app)
+      .patch(`/todos/1233`)
+      .expect(400)
+      .end(done);
+  });
+
+  it('should set completedAt to null when todo not completed', (done) => {
+    // get second todo _id
+    var hexId = todoArr[1]._id.toHexString();
+    var completed = false;
+    var text = "some silly second todo";
+    request(app)
+      .patch(`/todos/${hexId}`)
+      .send({text, completed})
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.todo.text).toBe(text);
+        expect(res.body.todo.completedAt).toBeNull();
+        expect(res.body.todo.completed).toBeFalsy();
+      })
+      .end(done);
+
+      // same as above (no need to go all the way into db to check but can be added to enhance the test)
+      // .end((err, res) => {
+      //   if (err) {
+      //     return done(err);
+      //   }
+      //   // query db to make sure completedAt is really null
+      //   Todo.findById(hexId).then((todo) => {
+      //     expect(todo.completedAt).toBeNull();
+      //     done();
+      //   }).catch((e) => done(e));
+      // });
+  });
+})
