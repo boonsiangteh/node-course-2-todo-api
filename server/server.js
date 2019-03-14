@@ -14,19 +14,6 @@ const port = process.env.PORT || 3005;
 // use bodyParser middleware to
 app.use(bodyParser.json());
 
-// create a /todos route for post requests to create todos in our Todo collection in Mongodb
-app.post("/todos", (req, res) => {
-  var todo = new Todo({
-    text: req.body.text
-  })
-
-  todo.save().then((doc) => {
-    res.send(doc);
-  }, (error) => {
-    res.status(400).send(error);
-  });
-});
-
 // get request for /todos route to get all todos
 app.get('/todos', (req, res) => {
   // get all documents in Todo collection
@@ -95,10 +82,31 @@ app.patch('/todos/:id', (req, res) => {
       res.send({todo});
     })
     .catch((e) => res.status(400).send());
-
-
 });
 
+// create a /todos route for post requests to create todos in our Todo collection in Mongodb
+app.post("/todos", (req, res) => {
+  var todo = new Todo({
+    text: req.body.text
+  })
+
+  todo.save().then((doc) => {
+    res.send(doc);
+  }, (error) => {
+    res.status(400).send(error);
+  });
+});
+
+// POST /users
+app.post('/users', (req, res) => {
+  var body = _.pick(req.body, ['email', 'password']);
+  var user = new User(body);
+  user.save().then((user) => {
+    res.status(200).send(user);
+  })
+  .catch((e) => res.status(400).send(e));
+
+});
 
 app.listen(port, () => {
   console.log(`Started on port ${port}`);
