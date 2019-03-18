@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const validator = require('validator');
 const jwt = require('jsonwebtoken');
 const _ = require('lodash');
+const bcrypt = require('bcryptjs');
 
 // create a user schema to define shape of user document
 var UserSchema = new mongoose.Schema({
@@ -86,6 +87,23 @@ UserSchema.statics.findByToken = function (token) {
     'tokens.access': 'auth'
   });
 }
+
+// use a mongoose middleware to perform password hashing when creating a user in post request
+// (this will fire every time a post request is fired)
+UserSchema.pre('save', function (next) {
+  var user = this;
+  // see if password is modified. If modified, save new password
+  if (user.isModified('password')) {
+    bcrypt.genSalt(10, (err, salt) => {
+      bcrypt.hash(user.password, salt, (err, hash) => {
+        user.password = hash; //set user password to the hashed Password
+        next();
+      });
+    });
+  } else {
+    next();
+  }
+});
 
 // create User model
 var User = mongoose.model('User', UserSchema);

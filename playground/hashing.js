@@ -1,17 +1,30 @@
 const {SHA256} = require('crypto-js');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 // we will use the jsonwebtoken library to help us authenticate users
-var data = {
-  id: 10
-}
-// to create a hash (this is actually more complicated than our basic implementation)
-var token = jwt.sign(data, 'somesecretsalt');
-console.log("json web token: ",token);
+// var data = {
+//   id: 10
+// }
+// // to create a hash (this is actually more complicated than our basic implementation)
+// var token = jwt.sign(data, 'somesecretsalt');
+// console.log("json web token: ",token);
+//
+// var decoded = jwt.verify(token, 'somesecretsalt');
+// console.log('decoded:  ', decoded);
 
-var decoded = jwt.verify(token, 'somesecretsalt');
-console.log('decoded:  ', decoded);
+// use bcrypt library to generate secure salt and hash user password (use 10 rounds of salting)
+bcrypt.genSalt(10, function (err, salt) {
+  bcrypt.hash('abc123!', salt, (err, hash) => {
+    console.log(hash);
+  });
+});
 
+// compare hashed password to user password
+var hashedPassword = '$2a$10$sN0XPT8.1qxFDG9SDifNOuwWNEyEH3Z9ObN0L2Q1xfuxyhJWYWqzG';
+bcrypt.compare('abc123!', hashedPassword,(err, res) => {
+  console.log(res);
+});
 
 // /*
 // the code below only serve to illustrate the basics of how authentication and web tokens work :)
