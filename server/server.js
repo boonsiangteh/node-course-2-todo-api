@@ -110,6 +110,23 @@ app.post('/users', (req, res) => {
 
 });
 
+// GET user back after authenticating through header
+app.get('/users/me', (req, res) => {
+  // get token from x-auth header
+  var token = req.header('x-auth');
+
+  // find User by token (use custom function)
+  User.findByToken(token).then((user) => {
+    if (!user) {
+      return Promise.reject();
+    }
+    res.send(user);
+  }).catch((e) => {
+    res.status(401).send();
+  });
+
+});
+
 app.listen(port, () => {
   console.log(`Started on port ${port}`);
 });

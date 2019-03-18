@@ -52,11 +52,39 @@ UserSchema.methods.generateAuthToken = function () {
 
 // limit the information that gets sent back to client (only send id and email)
 UserSchema.methods.toJSON = function () {
-  console.log('==========when is this called===========');
   var user = this;
   var userObject = user.toObject();
 
   return _.pick(userObject, ['_id', 'email']);
+}
+
+// define a custom function to find user by token provided in header
+// returns a promise which can be chained
+UserSchema.statics.findByToken = function (token) {
+  // statics method binds the function to the Model, not the user document
+  var User = this;
+  var decode;
+
+// user try catch block to catch errors and
+// allow code to continue running even though we get errros
+  try {
+    decode =  jwt.verify(token, 'somesecretsalt');
+  } catch (e) {
+    // longer version of returning a Promise.reject()
+    // return Promise(function (resolve, reject) {
+    //   reject();
+    // });
+
+    // return reject to prevent code from continuing to User.findOne
+    // since we are returning a promise, we can catch this error in the catch call in server.js
+    return Promise.reject();
+  }
+
+  return User.findOne({
+    '_id': decode._id,
+    'tokens.token': token,
+    'tokens.access': 'auth'
+  });
 }
 
 // create User model
