@@ -7,6 +7,7 @@ const {ObjectID} = require('mongodb');
 const {mongoose} = require('./db/mongoose');
 const {Todo} = require('./models/todo');
 const {User} = require('./models/user');
+const {authenticate} = require('./middleware/authenticate');
 
 var app = express();
 
@@ -110,21 +111,9 @@ app.post('/users', (req, res) => {
 
 });
 
-// GET user back after authenticating through header
-app.get('/users/me', (req, res) => {
-  // get token from x-auth header
-  var token = req.header('x-auth');
-
-  // find User by token (use custom function)
-  User.findByToken(token).then((user) => {
-    if (!user) {
-      return Promise.reject();
-    }
-    res.send(user);
-  }).catch((e) => {
-    res.status(401).send();
-  });
-
+// GET user back after authenticating user through request header (using authenticate middleware)
+app.get('/users/me', authenticate ,(req, res) => {
+  res.send(req.user);
 });
 
 app.listen(port, () => {
