@@ -5,29 +5,14 @@ const {ObjectID} = require('mongodb');
 
 const {app} = require('./../server');
 const {Todo} = require('./../models/todo');
+const {todoArr, populateTodos, userArr, populateUsers} = require('./seed/seed');
 
-// create a few example todos for testing GET requests
-const todoArr = [
-  {
-    _id: new ObjectID(),
-    text: "First todo"
-  },
-  {
-    _id: new ObjectID(),
-    text: "Second todo",
-    completed: true,
-    completedAt: 123
-  }
-];
+// populate test database with seed users
+beforeEach(populateUsers);
 
 // in order to pass document length test in our test on Todo collection below,
 // we will clean up our Todo collection before we test (we'll use beforeEach() hook from mochajs)
-beforeEach((done) => {
-  // remove all the documents in our Todo collection by passing nothing into the object in remove fn
-  Todo.remove({}).then(() => {
-    return Todo.insertMany(todoArr);
-  }).then(() => done());
-});
+beforeEach(populateTodos);
 
 // create test case to test our http post request
 describe('POST /todos', () => {
