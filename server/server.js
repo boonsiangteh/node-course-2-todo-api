@@ -2,8 +2,9 @@ require('./config/config');
 const _ = require('lodash');
 const express = require('express');
 const bodyParser = require('body-parser');
-const {ObjectID} = require('mongodb');
+const bcrypt = require('bcryptjs');
 
+const {ObjectID} = require('mongodb');
 const {mongoose} = require('./db/mongoose');
 const {Todo} = require('./models/todo');
 const {User} = require('./models/user');
@@ -86,7 +87,7 @@ app.patch('/todos/:id', (req, res) => {
 });
 
 // create a /todos route for post requests to create todos in our Todo collection in Mongodb
-app.post("/todos", (req, res) => {
+app.post('/todos', (req, res) => {
   var todo = new Todo({
     text: req.body.text
   })
@@ -113,6 +114,24 @@ app.post('/users', (req, res) => {
 // GET user back after authenticating user through request header (using authenticate middleware)
 app.get('/users/me', authenticate ,(req, res) => {
   res.send(req.user);
+});
+
+// login functionality for users
+app.post('/users/login', (req, res) => {
+  if (_.isEmpty(req.body) || req.body.email === "" || req.body.password === "") {
+    return res.status(401).send("Must enter email and password");
+  }
+
+  var body = _.pick(req.body, ['email', 'password']);
+
+  User.findByCredentials(body.email, body.password).then((user) => {
+    return user.generateAuthToken().then((token) => {
+      res.header('x-auth',token).send(user);
+    });
+  }).catch((e) => {
+    res.status(400).send();
+  });
+
 });
 
 app.listen(port, () => {
