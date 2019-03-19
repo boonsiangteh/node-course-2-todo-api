@@ -8,11 +8,11 @@ const authenticate = (req, res, next) => {
   // find User by token (use custom function)
   User.findByToken(token).then((user) => {
     if (!user) {
-      // by returning a reject(), the catch error can
+      // by returning a reject(), the catch error can fire
       return Promise.reject();
     }
 
-    // modify request object so that our get request can access it as well 
+    // modify request object so that our get request can access it as well
     req.user = user;
     req.token = token;
     next();

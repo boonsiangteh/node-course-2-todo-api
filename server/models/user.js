@@ -44,8 +44,8 @@ UserSchema.methods.generateAuthToken = function () {
   var user = this;
   var access = 'auth';
   var token = jwt.sign({_id: user._id.toHexString(), access}, 'somesecretsalt').toString();
-  // user.tokens = user.tokens.concat([{access, token}]);
-  user.tokens = [{access, token}];
+  user.tokens = user.tokens.concat([{access, token}]);
+  // user.tokens = [{access, token}];
   // return the token
   return user.save().then(() => {
     return token;
@@ -58,6 +58,17 @@ UserSchema.methods.toJSON = function () {
   var userObject = user.toObject();
 
   return _.pick(userObject, ['_id', 'email']);
+}
+
+// remove token when user logs out
+UserSchema.methods.removeToken = function (token) {
+  var user = this;
+
+  return user.update({
+    $pull: {
+      tokens: {token}
+    }
+  });
 }
 
 // define a custom function to find user by token provided in header
