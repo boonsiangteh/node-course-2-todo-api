@@ -18,20 +18,26 @@ const userArr = [{
 },{
   _id: userTwoId,
   email: 'johwatson@gmail.com',
-  password: 'marywatson'
+  password: 'marywatson',
+  tokens: [{
+    access: 'auth',
+    token: jwt.sign({_id: userTwoId.toHexString(), access: 'auth'}, 'somesecretsalt').toString()
+  }]
 }]
 
 // create a few example todos for testing GET requests
 const todoArr = [
   {
     _id: new ObjectID(),
-    text: "First todo"
+    text: "First todo",
+    _creator: userOneId
   },
   {
     _id: new ObjectID(),
     text: "Second todo",
     completed: true,
-    completedAt: 123
+    completedAt: 123,
+    _creator: userTwoId
   }
 ];
 

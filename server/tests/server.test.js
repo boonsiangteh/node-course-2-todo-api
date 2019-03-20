@@ -24,6 +24,7 @@ describe('POST /todos', () => {
 
     request(app)
       .post('/todos')
+      .set('x-auth', userArr[0].tokens[0].token)
       .send({text})
       .expect(200)
       .expect((response) => {
@@ -49,6 +50,7 @@ describe('POST /todos', () => {
 
     request(app)
       .post('/todos')
+      .set('x-auth', userArr[0].tokens[0].token)
       .send({})
       .expect(400)
       // pass in fn to end cause we have to perform async operations to get todos from mongodb
@@ -71,9 +73,10 @@ describe('GET /todos', () => {
     // 2nd way to do the same thing
     request(app)
       .get('/todos')
+      .set('x-auth', userArr[0].tokens[0].token)
       .expect(200)
       .expect((res) => {
-        expect(res.body.todos.length).toBe(2);
+        expect(res.body.todos.length).toBe(1);
       })
       .end(done);
       // no need to pass in fn to end cause we're not doing something async like post method above
@@ -86,10 +89,19 @@ describe("GET /todos/:id", () => {
   it("should get the todo with ID", (done) => {
     request(app)
     .get(`/todos/${todoArr[0]._id.toHexString()}`)
+    .set('x-auth', userArr[0].tokens[0].token)
     .expect(200) //expect status code 200 if everything goes well
     .expect((res) => {
       expect(res.body.todo.text).toBe(todoArr[0].text); //expect to get the correct todo back
     })
+    .end(done);
+  });
+
+  it("should not get the todo of another user", (done) => {
+    request(app)
+    .get(`/todos/${todoArr[0]._id.toHexString()}`)
+    .set('x-auth', userArr[1].tokens[0].token)
+    .expect(404)
     .end(done);
   });
 
@@ -98,6 +110,7 @@ describe("GET /todos/:id", () => {
     var someId = new ObjectID();
     request(app)
     .get(`/todos/${someId.toHexString()}`)
+    .set('x-auth', userArr[0].tokens[0].token)
     .expect(404)
     .end(done);
   });
@@ -106,6 +119,7 @@ describe("GET /todos/:id", () => {
   it("should return 400 bad request", (done) => {
     request(app)
     .get("/todos/123")
+    .set('x-auth', userArr[0].tokens[0].token)
     .expect(400)
     .end(done);
   });
@@ -117,6 +131,7 @@ describe('DELETE /todo/:id', () => {
     var hexId = todoArr[0]._id.toHexString(); //delete first todo
     request(app)
       .delete(`/todos/${hexId}`)
+      .set('x-auth', userArr[0].tokens[0].token)
       .expect(200)
       .expect((res) => {
         expect(res.body.todo._id).toBe(hexId);
@@ -132,16 +147,35 @@ describe('DELETE /todo/:id', () => {
         }).catch((e) => done(e));
       });
   });
+  it('should not delete todo of another user', (done) => {
+    var hexId = todoArr[0]._id.toHexString(); //delete first todo
+    request(app)
+      .delete(`/todos/${hexId}`)
+      .set('x-auth', userArr[1].tokens[0].token)
+      .expect(404)
+      .end((err, res) => {  //query the db to ensure document is actually deleted
+        if (err) {
+          return done();
+        }
+
+        Todo.findById(hexId).then((todo) => {
+          expect(todo).toBeTruthy();
+          done();
+        }).catch((e) => done(e));
+      });
+  });
   it('should return 404 if todo not found', (done) => {
     var randomId = new ObjectID().toHexString();
     request(app)
       .delete(`/todos/${randomId}`)
+      .set('x-auth', userArr[0].tokens[0].token)
       .expect(404)
       .end(done);
   });
   it('should return 400 if ID is invalid', (done) => {
     request(app)
       .delete('/todos/123')
+      .set('x-auth', userArr[0].tokens[0].token)
       .expect(400)
       .end(done);
   });
@@ -157,6 +191,7 @@ describe('PATCH /todos/:id', () => {
 
     request(app)
       .patch(`/todos/${hexId}`)
+      .set('x-auth', userArr[0].tokens[0].token)
       .send({text, completed})
       .expect(200)
       .expect((res) => {
@@ -168,29 +203,36 @@ describe('PATCH /todos/:id', () => {
 
       })
       .end(done);
+  });
 
-      /*
-      this part below was originally written but turns out not needed as we do not actually need to go into db and check our document
-      however, we can enhance checking by adding this code to go into collection and check if our document was really updated
-      */
-      // .end((err, res) => { //quey the db to make sure todo item is really updated
-      //   if (err) {
-      //     return done(err);
-      //   }
-      //
-      //   Todo.findById(hexId).then((todo) => {
-      //     expect(todo.text).toBe(text);
-      //     expect(todo.completed).toBeTruthy();
-      //
-      //     done();
-      //   }).catch((e) => done(e));
-      // });
+  it('should not patch todo of another user', (done) => {
+    var hexId = todoArr[0]._id.toHexString();
+    var text = "some silly text";
+    var completed = true;
+
+    request(app)
+      .patch(`/todos/${hexId}`)
+      .set('x-auth', userArr[1].tokens[0].token)
+      .send({text, completed})
+      .expect(404)
+      .end((err, res) => {
+        if (err) {
+          return done(err);
+        }
+
+        // query db to make sure the actual todo document is not modified
+        Todo.findById(hexId).then((todo) => {
+          expect(todo.text).toBe(todoArr[0].text);
+          done();
+        }).catch((e) => done(e));
+      });
   });
 
   it('should return 404 if todo._id not found', (done) => {
     var id = new ObjectID().toHexString();
     request(app)
       .patch(`/todos/${id}`)
+      .set('x-auth', userArr[0].tokens[0].token)
       .expect(404)
       .end(done);
   });
@@ -198,6 +240,7 @@ describe('PATCH /todos/:id', () => {
   it('should return 400 if invalid id is given', (done) => {
     request(app)
       .patch(`/todos/1233`)
+      .set('x-auth', userArr[0].tokens[0].token)
       .expect(400)
       .end(done);
   });
@@ -209,6 +252,7 @@ describe('PATCH /todos/:id', () => {
     var text = "some silly second todo";
     request(app)
       .patch(`/todos/${hexId}`)
+      .set('x-auth', userArr[1].tokens[0].token)
       .send({text, completed})
       .expect(200)
       .expect((res) => {
@@ -217,18 +261,6 @@ describe('PATCH /todos/:id', () => {
         expect(res.body.todo.completed).toBeFalsy();
       })
       .end(done);
-
-      // same as above (no need to go all the way into db to check but can be added to enhance the test)
-      // .end((err, res) => {
-      //   if (err) {
-      //     return done(err);
-      //   }
-      //   // query db to make sure completedAt is really null
-      //   Todo.findById(hexId).then((todo) => {
-      //     expect(todo.completedAt).toBeNull();
-      //     done();
-      //   }).catch((e) => done(e));
-      // });
   });
 });
 
@@ -312,8 +344,8 @@ describe('POST /users', () => {
 
 describe('POST /users/login', () => {
   it('should login user and return auth token', (done) => {
-    var email = userArr[0].email;
-    var password = userArr[0].password;
+    var email = userArr[1].email;
+    var password = userArr[1].password;
 
     request(app)
       .post('/users/login')
@@ -328,9 +360,9 @@ describe('POST /users/login', () => {
           return done(err);
         }
 
-        User.findById(userArr[0]._id).then((user) => {
-          expect(user.tokens[0]).toHaveProperty('access', 'auth');
-          expect(user.tokens[0]).toHaveProperty('token', res.header['x-auth']);
+        User.findById(userArr[1]._id).then((user) => {
+          expect(user.tokens[1]).toHaveProperty('access', 'auth');
+          expect(user.tokens[1]).toHaveProperty('token', res.header['x-auth']);
           done();
         }).catch((e) => done(e));
 
@@ -353,7 +385,7 @@ describe('POST /users/login', () => {
         }
 
         User.findById(userArr[1]._id).then((user) => {
-          expect(user.tokens.length).toBe(0);
+          expect(user.tokens.length).toBe(1);
           done();
         }).catch((e) => done(e));
       });

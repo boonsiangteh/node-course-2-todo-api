@@ -13,26 +13,45 @@ const {authenticate} = require('./middleware/authenticate');
 var app = express();
 
 const port = process.env.PORT || 3005;
-// use bodyParser middleware to
+// use bodyParser middleware to parse request bodies into json
 app.use(bodyParser.json());
 
+// create /todos and make it private using authenticate
+app.post('/todos', authenticate, (req, res) => {
+  var todo = new Todo({
+    text: req.body.text,
+    _creator: req.user._id
+  })
+
+  todo.save().then((doc) => {
+    res.send(doc);
+  }, (error) => {
+    res.status(400).send(error);
+  });
+});
+
 // get request for /todos route to get all todos
-app.get('/todos', (req, res) => {
+app.get('/todos', authenticate, (req, res) => {
   // get all documents in Todo collection
-  Todo.find().then((todos) => {
+  Todo.find({
+    _creator: req.user._id
+  }).then((todos) => {
     res.send({todos});
   }, (err) => {
     res.send(err);
   })
-})
+});
 
 // get request to get specific todo
-app.get('/todos/:id', (req, res) => {
+app.get('/todos/:id', authenticate ,(req, res) => {
   if (!ObjectID.isValid(req.params.id)) {
     return res.status(400).send();
   }
-  // res.send(`id Valid: ${req.params.id}`);
-  Todo.findById(req.params.id).then((todo) => {
+
+  Todo.findOne({
+    _id: req.params.id,
+    _creator: req.user._id
+  }).then((todo) => {
     if (!todo) {
       return res.status(404).send();
     }
@@ -41,13 +60,16 @@ app.get('/todos/:id', (req, res) => {
 });
 
 // route to delete todos
-app.delete('/todos/:id', (req, res) => {
+app.delete('/todos/:id', authenticate ,(req, res) => {
   // cater for if id is invalid
   if(!ObjectID.isValid(req.params.id)){
     return res.status(400).send();
   }
 
-  Todo.findByIdAndRemove(req.params.id).then((todo) => {
+  Todo.findOneAndRemove({
+    _id: req.params.id,
+    _creator: req.user._id
+  }).then((todo) => {
     // if todo doesn't exist, respond with 404
     if (!todo) {
       return res.status(404).send();
@@ -58,7 +80,7 @@ app.delete('/todos/:id', (req, res) => {
 });
 
 // route to update todos based on ID
-app.patch('/todos/:id', (req, res) => {
+app.patch('/todos/:id', authenticate,(req, res) => {
   var hexId = req.params.id;
 
   // invalid object ID passed
@@ -76,7 +98,10 @@ app.patch('/todos/:id', (req, res) => {
     body.completedAt = null;
   }
 
-  Todo.findByIdAndUpdate(hexId, {$set: body}, {new: true})
+  Todo.findOneAndUpdate({
+    _id: hexId,
+    _creator: req.user._id
+  }, {$set: body}, {new: true})
     .then((todo) => {
       if (!todo) {
         return res.status(404).send();
@@ -84,19 +109,6 @@ app.patch('/todos/:id', (req, res) => {
       res.send({todo});
     })
     .catch((e) => res.status(400).send());
-});
-
-// create a /todos route for post requests to create todos in our Todo collection in Mongodb
-app.post('/todos', (req, res) => {
-  var todo = new Todo({
-    text: req.body.text
-  })
-
-  todo.save().then((doc) => {
-    res.send(doc);
-  }, (error) => {
-    res.status(400).send(error);
-  });
 });
 
 // POST /users (create new users)
