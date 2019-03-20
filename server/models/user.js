@@ -43,7 +43,7 @@ UserSchema.methods.generateAuthToken = function () {
   */
   var user = this;
   var access = 'auth';
-  var token = jwt.sign({_id: user._id.toHexString(), access}, 'somesecretsalt').toString();
+  var token = jwt.sign({_id: user._id.toHexString(), access}, process.env.JWT_SECRET).toString();
   user.tokens = user.tokens.concat([{access, token}]);
   // user.tokens = [{access, token}];
   // return the token
@@ -81,7 +81,7 @@ UserSchema.statics.findByToken = function (token) {
 // user try catch block to catch errors and
 // allow code to continue running even though we get errros
   try {
-    decode =  jwt.verify(token, 'somesecretsalt');
+    decode =  jwt.verify(token, process.env.JWT_SECRET);
   } catch (e) {
     // longer version of returning a Promise.reject()
     // return Promise(function (resolve, reject) {
